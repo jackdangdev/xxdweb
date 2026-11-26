@@ -9,8 +9,9 @@ services:
     plan: free
     region: oregon
 
-    # Build: install backend deps, install client deps, build the client bundle
-    buildCommand: npm install --prefix Backend && npm install --prefix client && npm run build --prefix client
+    # Build: install backend deps, install client deps (with devDeps for vite),
+    # build the client bundle
+    buildCommand: npm install --prefix Backend && npm install --include=dev --prefix client && npm run build --prefix client
 
     # Start: run the Express server (it also serves client/dist)
     startCommand: npm start --prefix Backend
