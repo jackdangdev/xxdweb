@@ -2,7 +2,9 @@
 FROM node:20-alpine AS build
 WORKDIR /app
 COPY client/package.json client/package-lock.json ./client/
-RUN npm ci --prefix client
+# The committed lockfile only carries win32 rollup binaries; install the
+# musl Linux binary explicitly for the Alpine build (npm/cli#4828 workaround).
+RUN npm ci --prefix client && npm install --prefix client @rollup/rollup-linux-x64-musl@4.64.6 --no-save
 COPY client ./client
 # Empty VITE_API_URL makes the browser call /api/... on its own origin.
 ARG VITE_API_URL=""
