@@ -90,11 +90,14 @@ jobs:
         run: |
           node Backend/server.js > /tmp/api.log 2>&1 &
           npx --prefix client vite preview --host 127.0.0.1 --port 4173 --strictPort > /tmp/web.log 2>&1 &
-          for i in $(seq 1 60); do
-            if curl -sf http://127.0.0.1:5000/api/health > /dev/null && curl -sf http://127.0.0.1:4173/ > /dev/null; then
+          for i in $(seq 1 90); do
+            api=$(curl -s --max-time 5 -o /dev/null -w "%{http_code}" http://127.0.0.1:5000/api/health || echo "ERR")
+            web=$(curl -s --max-time 5 -o /dev/null -w "%{http_code}" http://127.0.0.1:4173/ || echo "ERR")
+            echo "attempt $i: api=$api web=$web"
+            if [ "$api" = "200" ] && [ "$web" = "200" ]; then
               echo "Stack ready"; exit 0
             fi
-            sleep 1
+            sleep 2
           done
           echo "--- API log ---"; cat /tmp/api.log
           echo "--- Web log ---"; cat /tmp/web.log
