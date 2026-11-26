@@ -31,15 +31,17 @@ jobs:
       PORT: 5000
       MONGO_URI: mongodb://127.0.0.1:27017/Portfolio
       CLIENT_ORIGIN: http://127.0.0.1:4173,http://localhost:4173
-      JWT_SECRET: ${{ secrets.JWT_SECRET }}
+      # Real values come from repo secrets when configured; the fallbacks keep
+      # CI self-contained (CI-only values, not production secrets).
+      JWT_SECRET: ${{ secrets.JWT_SECRET || 'ci-only-jwt-secret' }}
       JWT_EXPIRES_IN: 30d
       ADMIN_NAME: Portfolio Administrator
-      ADMIN_EMAIL: ${{ secrets.ADMIN_EMAIL }}
-      ADMIN_PASSWORD: ${{ secrets.ADMIN_PASSWORD }}
+      ADMIN_EMAIL: ${{ secrets.ADMIN_EMAIL || 'portfolio-admin@ci.local' }}
+      ADMIN_PASSWORD: ${{ secrets.ADMIN_PASSWORD || 'ci-admin-password-2026' }}
       CYPRESS_baseUrl: http://127.0.0.1:4173
       CYPRESS_apiUrl: http://127.0.0.1:5000
-      CYPRESS_adminEmail: ${{ secrets.ADMIN_EMAIL }}
-      CYPRESS_adminPassword: ${{ secrets.ADMIN_PASSWORD }}
+      CYPRESS_adminEmail: ${{ secrets.ADMIN_EMAIL || 'portfolio-admin@ci.local' }}
+      CYPRESS_adminPassword: ${{ secrets.ADMIN_PASSWORD || 'ci-admin-password-2026' }}
 
     steps:
       - name: Check out repository
@@ -66,6 +68,12 @@ jobs:
           npm ci
           npm ci --prefix Backend
           npm ci --prefix client
+          # client/package-lock.json was generated on Windows and therefore
+          # only contains the win32 rollup native binaries. Install the Linux
+          # binary explicitly (no lockfile/package.json change) so Vitest and
+          # the production build can run on ubuntu runners
+          # (see npm/cli#4828).
+          npm install --prefix client @rollup/rollup-linux-x64-gnu@4.64.6 --no-save
 
       # Part I - existing backend unit tests (node --test)
       - name: Backend unit tests
@@ -82,11 +90,14 @@ jobs:
         run: |
           node Backend/server.js > /tmp/api.log 2>&1 &
           npx --prefix client vite preview --host 127.0.0.1 --port 4173 --strictPort > /tmp/web.log 2>&1 &
-          for i in $(seq 1 60); do
-            if curl -sf http://127.0.0.1:5000/api/health > /dev/null && curl -sf http://127.0.0.1:4173/ > /dev/null; then
+          for i in $(seq 1 90); do
+            api=$(curl -s --max-time 5 -o /dev/null -w "%{http_code}" http://127.0.0.1:5000/api/health || echo "ERR")
+            web=$(curl -s --max-time 5 -o /dev/null -w "%{http_code}" http://127.0.0.1:4173/ || echo "ERR")
+            echo "attempt $i: api=$api web=$web"
+            if [ "$api" = "200" ] && [ "$web" = "200" ]; then
               echo "Stack ready"; exit 0
             fi
-            sleep 1
+            sleep 2
           done
           echo "--- API log ---"; cat /tmp/api.log
           echo "--- Web log ---"; cat /tmp/web.log

@@ -11,7 +11,9 @@ services:
 
     # Build: install backend deps, install client deps (with devDeps for vite),
     # build the client bundle
-    buildCommand: npm install --prefix Backend && npm install --include=dev --prefix client && npm run build --prefix client
+    # Note: the committed client lockfile only carries win32 rollup binaries,
+    # so install the Linux binary explicitly (npm/cli#4828 workaround).
+    buildCommand: npm install --prefix Backend && npm install --include=dev --prefix client && npm install --prefix client @rollup/rollup-linux-x64-gnu@4.64.6 --no-save && npm run build --prefix client
 
     # Start: run the Express server (it also serves client/dist)
     startCommand: npm start --prefix Backend

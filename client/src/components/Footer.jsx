@@ -87,7 +87,7 @@ export default function Footer() {
         </div>
 
         <div className="footer-bottom">
-          <span>© {new Date().getFullYear()} {profile.name}. Built with React, Vite &amp; Tailwind.</span>
+          <span>© {new Date().getFullYear()} {profile.name}. Built with React, Vite &amp; Tailwind. · Release 1.0</span>
           <button type="button" className="footer-shortcut" onClick={openCommands}>
             <kbd className="cmd-kbd">{SHORTCUT_LABEL}</kbd> Command palette
           </button>
