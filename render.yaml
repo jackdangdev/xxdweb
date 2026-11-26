@@ -1,36 +1,50 @@
-# Render Blueprint — single Node web service hosting the built React client
-# and the Express API, backed by MongoDB Atlas.
-# Values marked `sync: false` are secrets: enter them in the Render dashboard,
-# never in this file. See docs/assignment4/DEPLOYMENT.md.
+# Render Blueprint — MyPortfolio MERN stack
+# Docs: https://render.com/docs/blueprint-spec
+
+# ---------- Backend API (Web Service) ----------
 services:
   - type: web
-    name: myportfolio
+    name: myportfolio-api
     runtime: node
     plan: free
-    region: ohio
-    branch: main
+    rootDir: Backend
+    buildCommand: npm install
+    startCommand: npm start
     healthCheckPath: /api/health
-    buildCommand: >-
-      npm ci --prefix Backend &&
-      npm ci --prefix client &&
-      VITE_API_URL="" npm run build --prefix client
-    startCommand: node Backend/server.js
     envVars:
       - key: NODE_ENV
         value: production
-      - key: SERVE_CLIENT
-        value: "true"
-      - key: JWT_EXPIRES_IN
-        value: 30d
-      - key: CLIENT_ORIGIN
-        sync: false
+      # MongoDB connection string (required)
       - key: MONGO_URI
         sync: false
+      # JWT auth secret (required)
       - key: JWT_SECRET
-        sync: false
+        generateValue: true
+      - key: JWT_EXPIRES_IN
+        value: 30d
+      # Admin account created on first boot
       - key: ADMIN_NAME
-        sync: false
+        value: Portfolio Administrator
       - key: ADMIN_EMAIL
         sync: false
       - key: ADMIN_PASSWORD
         sync: false
+      # CORS: allow the deployed frontend origin
+      - key: CLIENT_ORIGIN
+        value: https://myportfolio-client.onrender.com
+
+# ---------- Frontend (Static Site) ----------
+  - type: web
+    name: myportfolio-client
+    runtime: static
+    rootDir: client
+    buildCommand: npm install && npm run build
+    outputDir: dist
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
+    envVars:
+      # Points to the backend service above
+      - key: VITE_API_URL
+        value: https://myportfolio-api.onrender.com
