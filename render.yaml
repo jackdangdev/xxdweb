@@ -1,50 +1,43 @@
-# Render Blueprint — MyPortfolio MERN stack
+# Render Blueprint — MyPortfolio MERN stack (single service)
+# One web service serves BOTH the Express API and the built React client.
 # Docs: https://render.com/docs/blueprint-spec
 
-# ---------- Backend API (Web Service) ----------
 services:
   - type: web
-    name: myportfolio-api
+    name: myportfolio
     runtime: node
     plan: free
-    rootDir: Backend
-    buildCommand: npm install
-    startCommand: npm start
+    region: oregon
+
+    # Build: install backend deps, install client deps, build the client bundle
+    buildCommand: npm install --prefix Backend && npm install --prefix client && npm run build --prefix client
+
+    # Start: run the Express server (it also serves client/dist)
+    startCommand: npm start --prefix Backend
+
     healthCheckPath: /api/health
+
     envVars:
       - key: NODE_ENV
         value: production
-      # MongoDB connection string (required)
+      # MongoDB connection string (required — set in dashboard)
       - key: MONGO_URI
         sync: false
-      # JWT auth secret (required)
+      # JWT auth secret (auto-generated)
       - key: JWT_SECRET
         generateValue: true
       - key: JWT_EXPIRES_IN
         value: 30d
-      # Admin account created on first boot
+      # Admin account seeded on first boot
       - key: ADMIN_NAME
         value: Portfolio Administrator
       - key: ADMIN_EMAIL
         sync: false
       - key: ADMIN_PASSWORD
         sync: false
-      # CORS: allow the deployed frontend origin
-      - key: CLIENT_ORIGIN
-        value: https://myportfolio-client.onrender.com
-
-# ---------- Frontend (Static Site) ----------
-  - type: web
-    name: myportfolio-client
-    runtime: static
-    rootDir: client
-    buildCommand: npm install && npm run build
-    staticPublishPath: dist
-    routes:
-      - type: rewrite
-        source: /*
-        destination: /index.html
-    envVars:
-      # Points to the backend service above
+      # Serve the built React client from the same Express service
+      - key: SERVE_CLIENT
+        value: "true"
+      # Empty value = same-origin relative /api/... requests (single-service mode)
       - key: VITE_API_URL
-        value: https://myportfolio-api.onrender.com
+        value: ""
